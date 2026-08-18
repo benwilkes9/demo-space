@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+#
+# What CI runs, run before the push instead of after it. There is no Node project here
+# and this hook does not start one: it shells out to the same published validator.
+#
+# Enable it once per clone, because git will not:
+#
+#   git config core.hooksPath .githooks
+#
+# `git push --no-verify` skips it.
+
+set -euo pipefail
+
+VALIDATOR_VERSION=0.1.0
+
+if output=$(npx --yes "@equalexperts/asf-corpus-validate@${VALIDATOR_VERSION}" context-repository 2>&1); then
+  printf '%s\n' "$output"
+  exit 0
+fi
+
+printf '%s\n' "$output" >&2
+
+case "$output" in
+*"error(s)"*) ;;
+*)
+  echo >&2
+  echo "The validator did not run. A 404 here means no \`read:packages\` token: it is a" >&2
+  echo "private package, and GitHub Packages authenticates even for reads." >&2
+  ;;
+esac
+
+exit 1
